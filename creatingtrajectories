@@ -1,0 +1,97 @@
+# Read the csv file
+dogfish <- read.csv("C:/Users/megan/OneDrive/Desktop/SmoothDogfishBiotelemetry (1)_Exclusions_ModforTraj.csv", 
+                    stringsAsFactors = FALSE) 
+# The file should be in your working directory.
+
+# Examine the structure of the data. Note presence of some NA's
+str(dogfish)
+
+plot(dogfish$latitude~dogfish$longitude, 
+     col = as.factor(dogfish$tagname), 
+     pch = 16)
+
+# Load library
+library(adehabitatLT)
+library(lubridate)
+# You will need to install the package the first time with: 
+# install.packages("adehabitatLT")
+
+
+
+# We need to make sure that date is correctly formatted, and that there is an ID column
+dogfish.ltraj <- as.ltraj(xy = dogfish[,c("longitude", "latitude")], 
+                          date =  as.POSIXct(dogfish$datecollected),id = dogfish$tagname)
+
+plot(dogfish.ltraj) # Plots each animal's points with a path connecting them
+
+dogfish.ltraj #data.ltraj is a list
+
+# Each element of the list is a dataframe for one individual
+head(dogfish.ltraj[[1]])  # The first six locations of the first animal
+
+#Export the data frame to a csv file
+#headanimal1 <- (head(dogfish.ltraj[[1]]))
+#write.csv(headanimal1, "C:/Users/megan/OneDrive/Desktop/HeadAnimal1.csv", row.names=FALSE)
+
+
+# Create a dataframe to hold all of the contents of bltu.paths with a column for id. 
+# Put first element into the dataframe
+total.path.df <- data.frame(dogfish.ltraj[[1]], id = attr(dogfish.ltraj[[1]], "id"))
+
+# Use a 'for' loop to fill the larger dataframe with the rest of the trajectories.
+for(i in 2:length(dogfish.ltraj)) {
+  total.path.df <- rbind(total.path.df, 
+                         data.frame(dogfish.ltraj[[i]], id = attr(dogfish.ltraj[[i]], "id")))
+}
+
+
+# Calculate distance travelled per year in km and add it to the dataframe
+total.path.df$distperyear <- (total.path.df$dist/1000) / (total.path.df$dt/60/60/24/365)
+
+# Aggregate to show mean distance per year for each dogfish
+path.summary <- aggregate(distperyear~id, data = total.path.df, FUN = mean)
+path.summary$sd <- aggregate(distperyear~id, data = total.path.df, FUN = sd)$distperyear
+
+# Calculate standard error of the mean
+path.summary$se <- path.summary$sd / sqrt(13)
+
+# Look at summmary dataframe
+path.summary
+
+summary(path.summary)
+
+
+# Make a graph to visualize data using ggplot
+library(ggplot2)
+# Create limits used for error bars in graph
+limits <- aes(ymax = distperyear + se, 
+              ymin = distperyear - se)
+
+# Make plot. Choose the dataframe (data) and aesthetics (aes; for the x and y)
+path.plot <- ggplot(data = path.summary, aes(x = id, y = distperyear, colour = id)) + 
+  geom_point(size = 3) + # add points
+  geom_errorbar(limits, width = 0.2) + # adds error bars
+  labs(x = "Tag name", 
+       y = "Mean distance travelled per year (km)" ) + # Axis labels
+   theme_classic() + # Make plot black and white with no background grid
+  theme(legend.position = "none")+ 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+path.plot # call plot
+
+
+
+#Export the data frame to a csv file
+#trajectorydata <- (path.summary)
+#write.csv(trajectorydata, "C:/Users/megan/OneDrive/Desktop/TrajectoryData.csv", row.names=FALSE)
+
+#Plot distperyear against body length
+#trajectory <- read.csv("C:/Users/megan/OneDrive/Desktop/TrajectoryData.csv", 
+ #                                 stringsAsFactors = FALSE)
+
+#plot(trajectory$distperyear~trajectory$length, 
+#     col = as.factor(trajectory$id), 
+#    pch = 16, xlab="Body length (cm) ", ylab="Mean distance travelled per year (km)", 
+#    abline(lm(trajectory$length~trajectory$distperyear), col="red")) # regression line (y~x))
+
+#coefficient <- cor.test(trajectory$distperyear, trajectory$length)
+#coefficient$estimate
