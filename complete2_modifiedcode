@@ -1,0 +1,281 @@
+#This code was largely altered and added to by Kat Kabanova
+
+# LOAD LIBRARIES ----
+library(dplyr)           # manipulating data
+library(ggplot2)         # visualizing data
+library(leaflet)         # interactive maps
+library(leaflet.extras)  # more leaflet functions
+library(leafsync)        # sync multiple leaflet maps
+
+dogfish <- read.csv("C:/Users/megan/OneDrive/Desktop/SmoothDogfishBiotelemetry (1)_Exclusions.csv")
+
+#Create a color palette for individual detections
+month_pal <- colorFactor(rainbow(20),
+                         domain = dogfish$tagname)
+
+#Scatterlot showing seasonal movements
+mymap = ggplot(dogfish) +
+  geom_point(aes(x = julianday, y = latitude,
+                 col = tagname)) +
+  ylim(32,50) +
+  theme_bw() +
+  labs(x = "Day of Year", y = "Latitude")
+mymap
+
+#Overall range map
+map1 <- dogfish %>%
+  filter(latitude > 32) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", tagname),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map1
+
+# Map for summer (April-September; Rountree and Able 1996) ---> keep this one;
+map.s <- dogfish %>%
+  filter(latitude > 32) %>%
+  filter(monthcollected > 3 & monthcollected < 10 ) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.s
+
+# Map for winter (Oct - March; Rountree and Able 1996) ---> keep this code
+map.w <- dogfish %>%
+  filter(latitude > 32) %>%
+  filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.w
+
+#Next: heat maps
+#Heat map for summer (April-Sept)
+hm1 <- dogfish %>%
+  filter(latitude > 32) %>%
+  filter(monthcollected > 3 & monthcollected < 10 ) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addHeatmap(radius = 10) %>%
+  addCircleMarkers(radius = 1,
+                   stroke = FALSE,
+                   color = "black")
+
+
+#Heat map for winter (Oct-March)
+hm2 <- dogfish %>%
+  filter(latitude > 32) %>%
+  filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addHeatmap(radius = 10) %>%
+  addCircleMarkers(radius = 1,
+                   stroke = FALSE,
+                   color = "black")
+
+hm3 = sync(hm1, hm2)
+hm3
+
+
+#IMPORTANT HABITATS
+
+#DELAWARE BAY
+#Look at movements during any year SUMMER (DELAWARE BAY)
+map.dela.summer <- dogfish %>%
+  #filter(latitude > 32) %>%
+  filter(latitude > 38.5 & latitude < 39.5 ) %>% #Look at just Delaware Bay
+  #filter(timeofday < 20 & timeofday > 7 ) %>%
+  filter(monthcollected > 3 & monthcollected < 10 ) %>%
+  # filter(yearcollected == 2020) %>% #Just in 2018
+  leaflet() %>%
+  addTiles() %>%
+  #addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname))
+addLegend(position = "bottomright",
+          pal = month_pal,
+          values = ~tagname,
+          title = "Individual (tag name)")
+map.dela.summer
+
+#Look at movements in DELAWARE BAY during any year WINTER
+map.dela.winter <- dogfish %>%
+  filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  filter(latitude > 38.5 & latitude < 39.5 ) %>% #Look at just Delaware Bay
+  # filter(yearcollected == 2020) %>% #Just in 2018
+  # filter(timeofday > 19 | timeofday < 8 )%>%
+  leaflet() %>%
+  addTiles() %>%
+  #addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.dela.winter
+
+#Sync DELAWARE maps for summer vs. winter
+map.dela.summer.winter = sync(map.dela.summer, map.dela.winter)
+map.dela.summer.winter
+
+#PAMLICO SOUND
+#Look at PAMLICO SOUND during any year WINTER
+map.pam.winter <- dogfish %>%
+  #filter(latitude > 32) %>%
+  filter(latitude > 34.5 & latitude < 36.3) %>% #Look at just Pamlico sound
+  filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  # filter(yearcollected == 2020) %>% #Just in 2018
+  leaflet() %>%
+  addTiles() %>%
+  addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected, "/"),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.pam.winter
+
+#Look at movements in PAMLICO SOUND during any year SUMMER
+map.pam.summer <- dogfish %>%
+  #filter(latitude > 32) %>%
+  filter(latitude > 34.5 & latitude < 36.3 ) %>% #Look at just Pamlico Sound
+  filter(monthcollected > 3 & monthcollected < 10 ) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.pam.summer #N yearly returnees = 0 in summer BUT 2 in winter
+
+#Sync PAMLICO summer vs. winter
+map.pam.summer.winter = sync(map.pam.summer, map.pam.winter)
+map.pam.summer.winter
+
+#5055 - Pamlico Sound use
+map.55 <- dogfish %>%
+  #filter(latitude > 34.5 & latitude < 36.3) %>%
+  filter(tagname == "A69-1601-50055", tagname == "A69-1601-50054", tagname == "A69-1601-50051") %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.55
+
+#5051 - Pamlico Sound use
+map.55 <- dogfish %>%
+  #filter(latitude > 34.5 & latitude < 36.3) %>%
+  filter(tagname == "A69-1601-50055") %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.55
+
+#OCEAN CITY
+#Look at movements during any year SUMMER
+map.ocea.summer <- dogfish %>%
+  #filter(latitude > 32) %>%
+  filter(latitude > 38.26 & latitude < 38.4 ) %>% #Look at just Delaware Bay
+  #filter(timeofday < 20 & timeofday > 7 ) %>%
+  filter(monthcollected > 3 & monthcollected < 10 ) %>%
+  # filter(yearcollected == 2020) %>% #Just in 2018
+  leaflet() %>%
+  addTiles() %>%
+  #addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.ocea.summer
+
+#Look at movements in OCEAN CITY during any year WINTER
+map.ocea.winter <- dogfish %>%
+  filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  filter(latitude > 38.26 & latitude < 38.4 ) %>% #Look at just Delaware Bay
+  # filter(yearcollected == 2020) %>% #Just in 2018
+  # filter(timeofday > 19 | timeofday < 8 )%>%
+  leaflet() %>%
+  addTiles() %>%
+  #addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.ocea.winter
+
+#Sync OCEAN CITY maps for summer vs. winter
+map.ocea.summer.winter = sync(map.ocea.summer, map.ocea.winter)
+map.ocea.summer.winter
+
+#CAPE COD
+#Look at CAPE COD
+map.cc.winter <- dogfish %>%
+  #filter(monthcollected < 4 | monthcollected > 8 ) %>%
+  filter(latitude > 41 & latitude < 43 ) %>% #Look at just Ocean City
+  # filter(yearcollected == 2020) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addHeatmap(radius = 10) %>%
+  addCircleMarkers(stroke = FALSE,
+                   radius = 5,
+                   label = ~paste0(monthcollected, "/", yearcollected),
+                   fillColor = ~month_pal(tagname)) %>%
+  addLegend(position = "bottomright",
+            pal = month_pal,
+            values = ~tagname,
+            title = "Individual (tag name)")
+map.cc.winter
